@@ -1,88 +1,60 @@
-from collections import defaultdict
-import csv
-from itertools import combinations
-
-def read_csv_file(filename):
-    with open(filename, 'r') as file:
-        reader = csv.reader(file)
-        next(reader)  
-        transactions = []
-        for row in reader:
-            transactions.append([int(item) for item in row[1].split(',')])
-        return transactions
-
-
-def pincer_search(transactions, min_sup):
+def pincer_search(words, max_distance):
     
-    itemsets = defaultdict(int)
-    frequent_itemsets = []
-    n = len(transactions)
-    m = len(transactions[0])
-    start = 0
-    end = m - 1
+    upper_bounds = [len(word) + max_distance for word in words]
+    lower_bounds = [len(word) - max_distance for word in words]
     
-    # Phase 1: forward pincer movement
-    while start < n and end >= 0:
-        
-        count = defaultdict(int)
-        for i in range(start, n):
-            for j in range(end, -1, -1):
-                items = transactions[i][j:]
-                for k in range(len(items)):
-                    itemset = tuple(sorted(items[:k] + items[k+1:]))
-                    count[itemset] += 1
-
-        
-        infrequent_itemsets = set(itemset for itemset, freq in count.items() if freq < min_sup)
-        for itemset in infrequent_itemsets:
-            del count[itemset]
-
-        
-        frequent_itemsets.extend(count.keys())
-        itemsets.update(count)
-
-        
-        if end > 0:
-            end -= 1
-        else:
-            start += 1
-
-    # Phase 2: backward pincer movement
-    for i in range(n):
-        for j in range(m):
-            items = transactions[i][:j+1]
-            for k in range(len(items)):
-                itemset = tuple(sorted(items[:k] + items[k+1:]))
-                if itemset in itemsets and itemsets[itemset] >= min_sup:
-                    frequent_itemsets.append(itemset)
-
+    candidates = set()
+    confirmed_pairs = set()
     
-    rules = []
-    for itemset in frequent_itemsets:
-        for i in range(1, len(itemset)):
-            for antecedent in combinations(itemset, i):
-                antecedent = tuple(sorted(antecedent))
-                consequent = tuple(sorted(set(itemset) - set(antecedent)))
-                support = itemsets[itemset] / float(n)
-                confidence = itemsets[itemset] / float(itemsets[antecedent])
-                lift = confidence / (itemsets[consequent] / float(n))
-                if confidence >= min_conf:
-                    rules.append((antecedent, consequent, support, confidence, lift))
+    for i, word1 in enumerate(words):
+        
+        for j in range(i + 1, len(words)):
+            if len(words[j]) > upper_bounds[i]:
+                break
+            if len(words[j]) >= lower_bounds[i]:
+                diff_count = sum(1 for c1, c2 in zip(word1, words[j]) if c1 != c2)
+                if diff_count <= max_distance:
+                    candidates.add((word1, words[j]))
+        
+        for j in range(i - 1, -1, -1):
+            if len(words[j]) < lower_bounds[i]:
+                break
+            if len(words[j]) <= upper_bounds[i]:
+                diff_count = sum(1 for c1, c2 in zip(word1, words[j]) if c1 != c2)
+                if diff_count <= max_distance:
+                    candidates.add((word1, words[j]))
+        
+        for candidate in candidates:
+            for j, word2 in enumerate(candidate):
+                # Check upper bounds of the confirmed word
+                upper_bound = len(word2) + max_distance
+                for k in range(j + 1, len(candidate)):
+                    if len(candidate[k]) > upper_bound:
+                        break
+                    if len(candidate[k]) >= lower_bounds[i]:
+                        diff_count = sum(1 for c1, c2 in zip(word2, candidate[k]) if c1 != c2)
+                        if diff_count <= max_distance:
+                            confirmed_pairs.add(candidate)
+                            break
+                # Check lower bounds of the confirmed word
+                lower_bound = len(word2) - max_distance
+                for k in range(j - 1, -1, -1):
+                    if len(candidate[k]) < lower_bound:
+                        break
+                    if len(candidate[k]) <= upper_bounds[i]:
+                        diff_count = sum(1 for c1, c2 in zip(word2, candidate[k]) if c1 != c2)
+                        if diff_count <= max_distance:
+                            confirmed_pairs.add(candidate)
+                            break
+    
+    return confirmed_pairs
 
-    return frequent_itemsets, rules
+# Take input from the user
+words_str = input("Enter a list of words (separated by spaces): ")
+words = words_str.split()
+max_distance = int(input("Enter the maximum edit distance: "))
 
-
-
-filename = 'transactionsint.csv'
-min_sup = 3
-min_conf = 0.5
-transactions = read_csv_file(filename)
-frequent_itemsets, rules = pincer_search(transactions, min_sup)
-
-print("Frequent itemsets:")
-for itemset in frequent_itemsets:
-    print(list(itemset),end=',')
-
-print("Association rules:")
-for antecedent, consequent, support, confidence, lift in rules:
-    print(list(antecedent), "->", list(consequent), "Support:", round(support, 2), "Confidence:", round(confidence, 2))
+pairs = pincer_search(words, max_distance)
+print("Pairs within edit distance of", max_distance, ":")
+for pair in pairs: 
+    print(pair)
