@@ -1,26 +1,19 @@
-def candidate_generation(input_set):
-    
-    #initialize an empty set for storing the subsets
-    
-    subsets=[]
-    
-    #iterate through all possible subsets
-    
-    for i in range(2**len(input_set)):
-        
-        #initialize the element subset
-        subset = []
-        
-        #iterate through all the input sets
-        for j in range(len(input_set)):
-            
-            # check the jth bit in the set
-            if i&(1<<j):
-                subset.append(input_set[j])
-                subsets.append(subset)
-    return subsets
+def generate_candidates(words, max_distance):
+    candidates = set()
+    for i, word1 in enumerate(words):
+        for j, word2 in enumerate(words[i+1:], start=i+1):
+            if abs(j - i) > max_distance:
+                break
+            if len(word1) == len(word2):
+                diff_count = sum(1 for c1, c2 in zip(word1, word2) if c1 != c2)
+                if diff_count <= max_distance:
+                    candidates.add((word1, word2))
+    return candidates
 
-input_set = str(input('enter the set - ').strip())
-subsets = candidate_generation(input_set)
+words = input("Enter a list of words (separated by spaces): ").split()
+max_distance = int(input("Enter the maximum edit distance: "))
 
-print(subsets)
+candidates = generate_candidates(words, max_distance)
+print("Candidates within edit distance of", max_distance, ":")
+for candidate in candidates:
+    print(candidate)
