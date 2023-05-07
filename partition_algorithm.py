@@ -1,21 +1,22 @@
-import pandas as pd
-from mlxtend.frequent_patterns import apriori, association_rules
-
-df = pd.read_csv('new.csv')
-
-
-items = df['Items Purchased'].str.split(',', expand=True)
-
-df = pd.get_dummies(items.stack()).sum(level=0)
-
-num_partitions = 2
-
-
-partitions = [df[i:i+len(df)//num_partitions] for i in range(0, len(df), len(df)//num_partitions)]
-
-for i, partition in enumerate(partitions):
-    frequent_itemsets = apriori(partition, min_support=0.3, use_colnames=True)
-    rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=0.15)
-    print(f"Partition {i+1}:")
-    print(frequent_itemsets)
-    print(rules)
+def partition(arr, pivot):
+   
+    pivot_val = arr[pivot]
+ 
+    i = 0
+    
+    for j in range(len(arr)):
+        
+        if arr[j] < pivot_val:
+           
+            arr[i], arr[j] = arr[j], arr[i]
+            
+            i += 1
+    
+    arr[i], arr[pivot] = arr[pivot], arr[i]
+    
+    return i
+arr = input("Enter the array elements separated by space: ").split()
+arr = [int(i) for i in arr]
+pivot = int(input("Enter the index of the pivot value: "))
+partition(arr, pivot)
+print("Partitioned array:", arr)
